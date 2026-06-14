@@ -63,6 +63,7 @@ export function Loupe({
               draggable={false}
               style={{
                 maxWidth: "100%", maxHeight: "100%", objectFit: "contain",
+                imageOrientation: "from-image",
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
                 transition: drag.current ? "none" : "transform 0.08s",
               }}

@@ -19,7 +19,10 @@ self.onmessage = async (e: MessageEvent<WorkerIn>) => {
       blob = file; // JPEG/PNG/WebP render directly
     }
 
-    const src = await createImageBitmap(blob);
+    // Apply EXIF orientation so the grid thumbnail matches the loupe <img>
+    // (which auto-orients). Without this, portrait shots show sideways in the
+    // grid but upright in the loupe — a visible mismatch.
+    const src = await createImageBitmap(blob, { imageOrientation: "from-image" });
     const scale = Math.min(1, THUMB_MAX / Math.max(src.width, src.height));
     const tw = Math.max(1, Math.round(src.width * scale));
     const th = Math.max(1, Math.round(src.height * scale));
