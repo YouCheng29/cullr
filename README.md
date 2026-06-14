@@ -54,3 +54,10 @@ pnpm dev          # 桌面版 Chrome / Edge 開啟（需要 File System Access A
 
 - File System Access API：Chromium 桌機限定（Safari/Firefox 需唯讀 fallback）。
 - 部分格式（ARW）內嵌預覽非滿版 → 100% pixel-peep 需 v2 的全 RAW 解碼。
+
+## 文件
+
+- [產品 spec](docs/spec.md)
+- [架構原則（照片永遠本機）](docs/architecture.md)
+- [技術 spike：RAW 預覽抽取驗證](docs/spike-findings.md)
+- [驗證計畫（競品＋訪談）](docs/validation-plan.md)
