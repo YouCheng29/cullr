@@ -1,5 +1,7 @@
 # Cullr — 瀏覽器版 RAW 選片器（v0 scaffold）
 
+[![ci](https://github.com/YouCheng29/cullr/actions/workflows/ci.yml/badge.svg)](https://github.com/YouCheng29/cullr/actions/workflows/ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 > 拍完幾百上千張，從裡面快速挑出 keeper。**照片不上傳、免費、AI 輔助**——
 > 取代要 $139 的 Photo Mechanic / 要月費的 Aftershoot，且檔案全程留在你的電腦。
 
@@ -56,6 +58,10 @@ pnpm dev          # 桌面版 Chrome / Edge 開啟（需要 File System Access A
 - 部分格式（ARW）內嵌預覽非滿版 → 100% pixel-peep 需 v2 的全 RAW 解碼。
 
 ## 文件
+
+- [開發指南](docs/development.md)
+- [部署指南](docs/deployment.md)
+- [貢獻指南](CONTRIBUTING.md)
 
 - [產品 spec](docs/spec.md)
 - [架構原則（照片永遠本機）](docs/architecture.md)
