@@ -18,6 +18,10 @@ export function Loupe({ photo, url, onClose }: { photo: Photo; url: string | nul
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [grid, setGrid] = useState(false);
   const drag = useRef<{ x: number; y: number } | null>(null);
+  // latest values for the native wheel handler (avoids re-attaching the listener)
+  const natRef = useRef(nat); natRef.current = nat;
+  const zoomRef = useRef(zoom); zoomRef.current = zoom;
+  const panRef = useRef(pan); panRef.current = pan;
 
   // "fit" = the largest zoom that shows the whole photo, never upscaling.
   const fit = nat && vp.w > 0 ? Math.min(vp.w / nat.w, vp.h / nat.h, 1) : 1;
@@ -38,6 +42,36 @@ export function Loupe({ photo, url, onClose }: { photo: Photo; url: string | nul
   };
   // once we know natural + viewport, snap to fit
   useEffect(() => { if (nat && vp.w > 0) { setZoom(Math.min(vp.w / nat.w, vp.h / nat.h, 1)); setPan({ x: 0, y: 0 }); } }, [nat, vp.w, vp.h]);
+
+  // Native (non-passive) wheel handler: React's onWheel is passive so it can't
+  // preventDefault — without this the photo grid behind the loupe scrolls.
+  // Also zooms toward the cursor (the point under the mouse stays put).
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const n = natRef.current;
+      if (!n) return;
+      const rect = el.getBoundingClientRect();
+      const fitNow = Math.min(rect.width / n.w, rect.height / n.h, 1);
+      const oldZoom = zoomRef.current;
+      const newZoom = Math.min(MAX_ZOOM, Math.max(fitNow, oldZoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+      if (newZoom === oldZoom) return;
+      const k = newZoom / oldZoom;
+      const cx = e.clientX - (rect.left + rect.width / 2);
+      const cy = e.clientY - (rect.top + rect.height / 2);
+      const op = panRef.current;
+      let np = newZoom === fitNow ? { x: 0, y: 0 } : { x: cx * (1 - k) + k * op.x, y: cy * (1 - k) + k * op.y };
+      const mx = Math.max(0, (n.w * newZoom - rect.width) / 2);
+      const my = Math.max(0, (n.h * newZoom - rect.height) / 2);
+      np = { x: Math.min(mx, Math.max(-mx, np.x)), y: Math.min(my, Math.max(-my, np.y)) };
+      setZoom(newZoom);
+      setPan(np);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   // keyboard: zoom only (App owns arrows/rating/F/Esc)
   useEffect(() => {
@@ -90,7 +124,6 @@ export function Loupe({ photo, url, onClose }: { photo: Photo; url: string | nul
         onMouseMove={(e) => { if (drag.current) setPan(clampPan({ x: e.clientX - drag.current.x, y: e.clientY - drag.current.y })); }}
         onMouseUp={() => (drag.current = null)}
         onMouseLeave={() => (drag.current = null)}
-        onWheel={(e) => setZoom((z) => { const nz = clamp(z * (e.deltaY < 0 ? 1.15 : 1 / 1.15)); if (nz === fit) setPan({ x: 0, y: 0 }); return nz; })}
       >
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
