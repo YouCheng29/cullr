@@ -6,7 +6,7 @@ import {
 import type { Photo } from "../src/types.ts";
 
 function photo(p: Partial<Photo> & { name: string }): Photo {
-  return { id: p.name, handle: {} as FileSystemFileHandle, rating: 0, pick: "unrated", ...p };
+  return { id: p.name, file: new File([], p.name), rating: 0, pick: "unrated", ...p };
 }
 
 const photos: Photo[] = [

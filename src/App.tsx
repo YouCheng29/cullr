@@ -20,8 +20,7 @@ async function* walk(dir: FileSystemDirectoryHandle): AsyncGenerator<FileSystemF
 }
 
 /** Full-size preview as an object URL (RAW → embedded preview, else the file). */
-async function loadFullUrl(handle: FileSystemFileHandle): Promise<string | null> {
-  const file = await handle.getFile();
+async function loadFullUrl(file: File): Promise<string | null> {
   if (isRaw(file.name)) {
     const bytes = new Uint8Array(await file.arrayBuffer());
     const hit = extractPreview(bytes);
@@ -57,35 +56,46 @@ export default function App() {
     setPhotos((prev) => prev.map((x) => (x.id === id ? { ...x, ...p } : x)));
   }, []);
 
-  const openFolder = useCallback(async () => {
-    if (!window.showDirectoryPicker) {
-      alert("此瀏覽器不支援開啟資料夾，請用桌面版 Chrome / Edge。");
-      return;
-    }
-    const dir = await window.showDirectoryPicker({ mode: "readwrite" });
-    setBusy(true);
-    const handles: FileSystemFileHandle[] = [];
-    for await (const h of walk(dir)) if (isSupported(h.name)) handles.push(h);
-    const initial: Photo[] = handles.map((handle, i) => ({
-      id: `${i}-${handle.name}`, name: handle.name, handle, rating: 0, pick: "unrated" as Pick,
+  // Common pipeline for both entry points: take Files → grid → worker.
+  const ingest = useCallback((files: File[]) => {
+    const supported = files.filter((f) => isSupported(f.name));
+    const initial: Photo[] = supported.map((file, i) => ({
+      id: `${i}-${file.name}`, name: file.name, file, rating: 0, pick: "unrated" as Pick,
     }));
     setPhotos(initial);
     setFocus(0);
 
     if (!workerRef.current) {
       workerRef.current = new Worker(new URL("./worker/preview.worker.ts", import.meta.url), { type: "module" });
+      workerRef.current.onmessage = (e: MessageEvent<WorkerOut>) => {
+        const m = e.data;
+        setPhotos((prev) => prev.map((p) =>
+          p.id !== m.id ? p
+            : m.ok ? { ...p, thumb: m.thumb, width: m.width, height: m.height, sharpness: m.sharpness }
+            : { ...p, error: m.error }));
+      };
     }
-    const worker = workerRef.current;
-    worker.onmessage = (e: MessageEvent<WorkerOut>) => {
-      const m = e.data;
-      setPhotos((prev) => prev.map((p) =>
-        p.id !== m.id ? p
-          : m.ok ? { ...p, thumb: m.thumb, width: m.width, height: m.height, sharpness: m.sharpness }
-          : { ...p, error: m.error }));
-    };
-    for (const p of initial) worker.postMessage({ id: p.id, file: await p.handle.getFile() });
-    setBusy(false);
+    for (const p of initial) workerRef.current!.postMessage({ id: p.id, file: p.file });
   }, []);
+
+  // Entry 1: folder picker (Chromium desktop).
+  const openFolder = useCallback(async () => {
+    if (!window.showDirectoryPicker) {
+      alert("此瀏覽器不支援開啟資料夾，請用下方『或選擇檔案』，或改用桌面版 Chrome / Edge。");
+      return;
+    }
+    const dir = await window.showDirectoryPicker({ mode: "readwrite" });
+    setBusy(true);
+    const files: File[] = [];
+    for await (const h of walk(dir)) if (isSupported(h.name)) files.push(await h.getFile());
+    ingest(files);
+    setBusy(false);
+  }, [ingest]);
+
+  // Entry 2: <input type=file> fallback (cross-browser + automatable in tests).
+  const onPickFiles = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    ingest(Array.from(e.target.files ?? []));
+  }, [ingest]);
 
   // Load the full-size preview when entering loupe / moving focus in loupe.
   useEffect(() => {
@@ -93,7 +103,7 @@ export default function App() {
     let alive = true;
     const cached = fullUrlCache.current.get(focused.id);
     if (cached) { setLoupeUrl(cached); return; }
-    loadFullUrl(focused.handle).then((url) => {
+    loadFullUrl(focused.file).then((url) => {
       if (!alive) { if (url) URL.revokeObjectURL(url); return; }
       if (url) fullUrlCache.current.set(focused.id, url);
       setLoupeUrl(url);
@@ -138,9 +148,16 @@ export default function App() {
       <header style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
         <h1 style={{ fontSize: 20, margin: 0 }}>Cullr</h1>
         <span style={{ color: "#888", fontSize: 13 }}>瀏覽器 RAW 選片器・照片不上傳</span>
-        <button onClick={openFolder} disabled={busy} style={{ marginLeft: "auto", padding: "6px 14px" }}>
-          {busy ? "讀取中…" : "開啟資料夾"}
-        </button>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={openFolder} disabled={busy} style={{ padding: "6px 14px" }}>
+            {busy ? "讀取中…" : "開啟資料夾"}
+          </button>
+          <label style={{ fontSize: 13, color: "#555", cursor: "pointer" }}>
+            或選擇檔案
+            <input type="file" multiple accept="image/*,.nef,.cr2,.cr3,.arw,.orf,.rw2,.raf,.dng,.heic"
+              onChange={onPickFiles} style={{ display: "none" }} data-testid="file-input" />
+          </label>
+        </div>
       </header>
 
       {photos.length > 0 && (
