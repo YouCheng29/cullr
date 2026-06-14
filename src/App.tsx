@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { extractPreview, isRaw, isSupported } from "./lib/extract-preview";
 import { clampIndex, picksToText, step, toCsv, toggleRating, visiblePhotos, softThreshold, type Filter } from "./lib/selection";
-import { Loupe, clampScale } from "./Loupe";
+import { Loupe } from "./Loupe";
 import type { Photo, Pick, WorkerOut } from "./types";
 
 declare global {
@@ -43,9 +43,6 @@ export default function App() {
   const [filter, setFilter] = useState<Filter>({ kind: "all" });
   const [focus, setFocus] = useState(0);
   const [loupe, setLoupe] = useState(false);
-  const [scale, setScale] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [grid, setGrid] = useState(false);
   const [loupeUrl, setLoupeUrl] = useState<string | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const fullUrlCache = useRef<Map<string, string>>(new Map());
@@ -129,7 +126,6 @@ export default function App() {
   // lazy full-size preview for loupe; reset zoom/pan when the photo changes
   useEffect(() => {
     if (!loupe || !focused) { setLoupeUrl(null); return; }
-    setScale(1); setPan({ x: 0, y: 0 });
     let alive = true;
     const cached = fullUrlCache.current.get(focused.id);
     if (cached) { setLoupeUrl(cached); return; }
@@ -168,11 +164,7 @@ export default function App() {
           if (f) patch(f.id, { pick: "unrated", rating: 0 }); break;
         case "f": case "F": setLoupe((v) => !v); break;
         case "Escape": setLoupe(false); break;
-        // loupe-only zoom controls
-        case "+": case "=": if (loupe) setScale((s) => clampScale(s * 1.4)); break;
-        case "-": if (loupe) setScale((s) => clampScale(s / 1.4)); break;
-        case "0": if (loupe) { setScale(() => 1); setPan(() => ({ x: 0, y: 0 })); } break;
-        case "g": case "G": if (loupe) setGrid((v) => !v); break;
+        // loupe zoom keys (+/-/0/g) are handled inside <Loupe/>
         default: return;
       }
       e.preventDefault();
@@ -250,8 +242,7 @@ export default function App() {
       )}
 
       {loupe && focused && (
-        <Loupe photo={focused} url={loupeUrl} scale={scale} setScale={setScale} pan={pan} setPan={setPan}
-          grid={grid} setGrid={setGrid} onClose={() => setLoupe(false)} />
+        <Loupe photo={focused} url={loupeUrl} onClose={() => setLoupe(false)} />
       )}
     </div>
   );
