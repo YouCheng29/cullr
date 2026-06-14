@@ -57,7 +57,10 @@ export function extractPreview(bytes: Uint8Array): PreviewHit | null {
   return best ? { start: best.start, end: best.end, width: best.width, height: best.height } : null;
 }
 
-const RAW_EXTS = new Set(["nef", "cr2", "arw", "orf", "rw2", "raf", "pef", "srw", "tif", "tiff"]);
+// dng/cr3 are recognised as RAW so they're reported honestly ("preview not
+// readable yet, v0.5") rather than silently skipped — extractPreview returns
+// null for them today (DNG = tiled JPEG, CR3 = non-TIFF container).
+const RAW_EXTS = new Set(["nef", "cr2", "arw", "orf", "rw2", "raf", "pef", "srw", "tif", "tiff", "dng", "cr3"]);
 const JPEG_EXTS = new Set(["jpg", "jpeg", "png", "webp"]);
 
 export function ext(name: string): string {

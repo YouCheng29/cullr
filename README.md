@@ -61,6 +61,7 @@ pnpm dev          # 桌面版 Chrome / Edge 開啟（需要 File System Access A
 
 - [開發指南](docs/development.md)
 - [部署指南](docs/deployment.md)
+- [CLI（headless/自動化）](docs/cli.md)
 - [貢獻指南](CONTRIBUTING.md)
 
 - [產品 spec](docs/spec.md)
