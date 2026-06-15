@@ -152,13 +152,19 @@ export function Loupe({ photo, url, onClose }: { photo: Photo; url: string | nul
           </span>
         )}
 
-        {grid && (
-          <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+        {grid && nat && (
+          // Aligned to the PHOTO box (same centre/size/pan as the image), not
+          // the viewport, so the thirds land on the composition.
+          <div style={{
+            position: "absolute", left: "50%", top: "50%", width: dispW, height: dispH,
+            transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px)`,
+            pointerEvents: "none",
+          }}>
             {[33.333, 66.666].map((p) => (
-              <div key={"v" + p} style={{ position: "absolute", top: 0, bottom: 0, left: `${p}%`, width: 1, background: "rgba(255,255,255,0.4)" }} />
+              <div key={"v" + p} style={{ position: "absolute", top: 0, bottom: 0, left: `${p}%`, width: 1, background: "rgba(255,255,255,0.45)" }} />
             ))}
             {[33.333, 66.666].map((p) => (
-              <div key={"h" + p} style={{ position: "absolute", left: 0, right: 0, top: `${p}%`, height: 1, background: "rgba(255,255,255,0.4)" }} />
+              <div key={"h" + p} style={{ position: "absolute", left: 0, right: 0, top: `${p}%`, height: 1, background: "rgba(255,255,255,0.45)" }} />
             ))}
           </div>
         )}
