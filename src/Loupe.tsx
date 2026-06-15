@@ -119,13 +119,16 @@ export function Loupe({ photo, url, onClose }: { photo: Photo; url: string | nul
 
       <div
         ref={viewportRef}
-        style={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative", display: "grid", placeItems: "center", cursor: canPan ? (drag.current ? "grabbing" : "grab") : "default" }}
+        style={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative", cursor: canPan ? (drag.current ? "grabbing" : "grab") : "default" }}
         onMouseDown={(e) => { if (canPan) drag.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }; }}
         onMouseMove={(e) => { if (drag.current) setPan(clampPan({ x: e.clientX - drag.current.x, y: e.clientY - drag.current.y })); }}
         onMouseUp={() => (drag.current = null)}
         onMouseLeave={() => (drag.current = null)}
       >
         {url ? (
+          // Absolute-centred (not grid) so the image centre is ALWAYS at the
+          // viewport centre, even when zoomed larger than the viewport — that
+          // invariant is what makes the zoom-to-cursor math correct.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={url}
@@ -133,17 +136,20 @@ export function Loupe({ photo, url, onClose }: { photo: Photo; url: string | nul
             draggable={false}
             onLoad={onImgLoad}
             style={{
+              position: "absolute", left: "50%", top: "50%",
               width: nat ? dispW : "auto",
               height: nat ? dispH : "auto",
               maxWidth: nat ? "none" : "100%",
               maxHeight: nat ? "none" : "100%",
               imageOrientation: "from-image",
-              transform: `translate(${pan.x}px, ${pan.y}px)`,
+              transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px)`,
               transition: drag.current ? "none" : "transform 0.05s",
             }}
           />
         ) : (
-          <span style={{ color: "#888" }}>{photo.error ? "此格式無法預覽（DNG/CR3 留待 v0.5）" : "載入中…"}</span>
+          <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", color: "#888" }}>
+            {photo.error ? "此格式無法預覽（DNG/CR3 留待 v0.5）" : "載入中…"}
+          </span>
         )}
 
         {grid && (
